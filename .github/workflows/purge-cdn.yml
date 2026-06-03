@@ -1,0 +1,8 @@
+on:
+  push:
+    branches: [main]
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl "https://purge.jsdelivr.net/gh/CDSP-subjudicial/Automacao-CDSP@main/spa_sem_instalacao_console.js"
