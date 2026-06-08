@@ -1615,7 +1615,7 @@
     header.style.cssText = "display:flex;justify-content:space-between;align-items:center;gap:8px;";
 
     const title = document.createElement("div");
-    title.textContent = "Automação SPA - CDSP";
+    title.textContent = "Automação TESTE - CDSP";
     title.style.cssText = "font-weight:800;font-size:14px;flex:1;min-width:0;";
 
     const status = document.createElement("div");
