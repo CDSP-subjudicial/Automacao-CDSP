@@ -1427,7 +1427,7 @@
   }
 
   function guardStart() {
-    if (state.running) throw new Error("Automacao ja esta em execucao.");
+    if (state.running) throw new Error("Automação já está em execucao.");
     state.running = true;
     state.stopped = false;
   }
@@ -1518,7 +1518,7 @@
     setStoredCheckbox("#spa-cdsp-filter-tribunal-2", "SPA_CDSP_FILTER_TRIBUNAL_2", false);
     setStoredCheckbox("#spa-cdsp-filter-cejusc", "SPA_CDSP_FILTER_CEJUSC", false);
     updateActiveFiltersSummary();
-    if (!silent) log("Filtros de origem limpos.");
+    if (!silent) log("Filtros de Origem limpos.");
   }
 
   function clearDeadlineFilters(silent) {
@@ -1528,7 +1528,7 @@
     setStoredCheckbox("#spa-cdsp-deadline-none", "SPA_CDSP_DEADLINE_NONE", false);
     storageSet("SPA_CDSP_DEADLINE_FILTER", "");
     updateActiveFiltersSummary();
-    if (!silent) log("Filtros de prazo limpos.");
+    if (!silent) log("Filtros de Prazo limpos.");
   }
 
   function clearAllCustomFilters() {
@@ -1544,10 +1544,10 @@
 
     const labels = activeFilterLabels(currentCustomFilters());
     if (labels.length) {
-      label.textContent = "Filtros ativos: " + labels.join("; ");
+      label.textContent = "Filtros Ativos: " + labels.join("; ");
       label.style.color = "#ffe082";
     } else {
-      label.textContent = "Filtros ativos: nenhum";
+      label.textContent = "Filtros Ativos: nenhum";
       label.style.color = "#b0bec5";
     }
   }
@@ -1799,10 +1799,10 @@
       storageGet("SPA_CDSP_FILTER_TRIBUNAL_1", "0") === "1" ||
       storageGet("SPA_CDSP_FILTER_TRIBUNAL_2", "0") === "1" ||
       storageGet("SPA_CDSP_FILTER_CEJUSC", "0") === "1";
-    const section = createPanelSection("Filtros de origem", hasSavedFilter);
+    const section = createPanelSection("Filtros de Origem", hasSavedFilter);
 
     const hint = document.createElement("div");
-    hint.textContent = "Aplica as acoes somente aos processos que baterem com os filtros marcados.";
+    hint.textContent = "Aplica as ações somente aos processos que baterem com os filtros marcados.";
     hint.style.cssText = "font-size:11px;color:#9fb3c8;margin-bottom:6px;";
 
     section.body.appendChild(hint);
