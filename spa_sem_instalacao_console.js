@@ -28,8 +28,10 @@
     scienceFallbackSelector: "form.take-consciousness-btn, .take-consciousness-btn",
     rowSelector: "#procedures-box tbody tr.group-item:visible",
     expedienteSelector:
-      "a[data-original-title^='Ler Expediente'], " +
-      "a[title^='Ler Expediente'], " +
+      "a[data-original-title*='Ler Expediente'], " +
+      "a[title*='Ler Expediente'], " +
+      "a[href*='/coresigner/info/'], " +
+      "a[target^='document-'], " +
       "a",
     encerrarMarkerText: "ENCERRAR",
     encerramentoText: "Sugerir encerramento de tarefa",
@@ -175,7 +177,7 @@
     if (limit) {
       log("Limite definido pelo painel: " + limit + " numero(s) de processo.");
     } else {
-      log("Sem limite de quantidade: a ação seguirá ate o fim da lista.");
+      log("Sem limite de quantidade: a acao seguira ate o fim da lista.");
     }
   }
 
@@ -344,7 +346,7 @@
         dt.ajax.reload(null, false);
         refreshed = true;
       } catch (error) {
-        log("Atualização interna por AJAX falhou. Tentando redesenhar a tabela: " + error.message);
+        log("Atualizacao interna por AJAX falhou. Tentando redesenhar a tabela: " + error.message);
       }
     }
 
@@ -617,7 +619,7 @@
     if (processKey) return processKey;
     if (!processRows || !processRows.length) return "processo sem identificacao";
     const info = rowInfo(processRows[0]);
-    return info.id || info.assunto || "processo sem identificação";
+    return info.id || info.assunto || "processo sem identificacao";
   }
 
   async function takeScienceCurrentPage(limit, processedProcessKeys) {
@@ -626,7 +628,7 @@
     const seen = processedProcessKeys || new Set();
     let count = 0;
     log(
-      "Linhas visíveis na pagina: " +
+      "Linhas visiveis na pagina: " +
         pageRows.length +
         ". Numeros de processo: " +
         pageProcesses.length +
@@ -655,13 +657,13 @@
           await sleep(CONFIG.delayScienceMs);
           await waitProcessingDone();
         } else {
-          log("Sem botão de dar ciência: " + (info.id || info.assunto || label));
+          log("Sem botao de ciencia: " + (info.id || info.assunto || label));
         }
       }
 
       if (processTotal) {
         count += 1;
-        log("Processo contabilizado para ciência: " + label + ".", "ok");
+        log("Processo contabilizado para ciencia: " + label + ".", "ok");
       }
     }
 
@@ -691,7 +693,7 @@
         total += pageTotal;
 
         if (limit && total >= limit) {
-          log("Limite de ciências atingido (" + limit + ").");
+          log("Limite de ciencias atingido (" + limit + ").");
           break;
         }
 
@@ -700,11 +702,11 @@
         pageNumber += 1;
       }
 
-      log("Fase de ciência concluida. Números de processo acionados: " + total + ".", "ok");
-      setStatus("Ciências concluidas: " + total);
+      log("Fase de ciencia concluida. Numeros de processo acionados: " + total + ".", "ok");
+      setStatus("Ciencias concluidas: " + total);
     } catch (error) {
       log("Erro na fase de ciencia: " + error.message, "error");
-      setStatus("Erro na fase de ciência");
+      setStatus("Erro na fase de ciencia");
     } finally {
       state.running = false;
     }
@@ -767,15 +769,49 @@
     const link = tag === "a" ? element : element.closest("a[href]");
 
     if (link) {
-      try {
-        middleClickElement(link);
-        return true;
-      } catch (_error) {
-        return ctrlClickElement(link);
-      }
+      return openLinkInBackground(link);
     }
 
     return ctrlClickElement(element);
+  }
+
+  function openLinkInBackground(link) {
+    if (!link) return false;
+
+    const href = link.href || link.getAttribute("href") || "";
+    if (!href || href === "#") return ctrlClickElement(link);
+
+    if (link.scrollIntoView) {
+      link.scrollIntoView({ block: "center", inline: "nearest" });
+    }
+
+    const target = link.getAttribute("target") || "_blank";
+
+    try {
+      const opened = window.open(href, target);
+      if (opened) {
+        try {
+          opened.blur();
+        } catch (_error) {
+          // Alguns navegadores bloqueiam controle de foco da aba aberta.
+        }
+        keepCurrentTabFocused();
+        return true;
+      }
+    } catch (_error) {
+      // Se o navegador bloquear window.open, tenta o clique do próprio link.
+    }
+
+    try {
+      link.setAttribute("target", target);
+      const rel = link.getAttribute("rel") || "";
+      if (rel.indexOf("noopener") < 0) link.setAttribute("rel", (rel + " noopener noreferrer").trim());
+      link.click();
+      keepCurrentTabFocused();
+      return true;
+    } catch (_error) {
+      return ctrlClickElement(link);
+    }
   }
 
   function ctrlClickElement(element) {
@@ -838,10 +874,31 @@
   function getExpedientes(row) {
     return Array.from(row.querySelectorAll(CONFIG.expedienteSelector)).filter((element) => {
       if (!isVisible(element)) return false;
-      const title = element.getAttribute("data-original-title") || element.getAttribute("title") || "";
-      if (title.indexOf("Ler Expediente") === 0) return true;
-      return Boolean(element.querySelector("i.zmdi-file"));
+      return isExpedienteElement(element);
     });
+  }
+
+  function isExpedienteElement(element) {
+    const label = normalizeText(
+      [
+        element.getAttribute("data-original-title"),
+        element.getAttribute("title"),
+        element.getAttribute("aria-label"),
+        element.textContent,
+      ].join(" ")
+    ).toLowerCase();
+    const href = String(element.href || element.getAttribute("href") || "").toLowerCase();
+    const target = String(element.getAttribute("target") || "");
+    const hasFileIcon = Boolean(
+      element.querySelector(
+        "i.zmdi-file, i.zmdi-file-text, .zmdi-file, .zmdi-file-text, .fa-file, .fa-file-text, [class*='file']"
+      )
+    );
+
+    if (label.indexOf("ler expediente") >= 0) return true;
+    if (href.indexOf("/coresigner/info/") >= 0) return true;
+    if (/^document-\d+/i.test(target) && hasFileIcon) return true;
+    return hasFileIcon && label.indexOf("expediente") >= 0;
   }
 
   function rowProcedureKey(row) {
@@ -1002,7 +1059,7 @@
     const label = info.id || info.assunto || "linha sem id";
 
     if (!link) {
-      log("Opção de encerramento não encontrada: " + label, "error");
+      log("Opcao de encerramento nao encontrada: " + label, "error");
       return false;
     }
 
@@ -1085,7 +1142,7 @@
           "ok"
         );
       } else if (attempts) {
-        log("Nenhuma pendência foi encerrada para o processo " + processKey + ".", "error");
+        log("Nenhuma pendencia foi encerrada para o processo " + processKey + ".", "error");
       }
     }
 
@@ -1130,7 +1187,7 @@
       if (!total) {
         log("Nenhum processo com marcador ENCERRAR foi encerrado.", "error");
       } else {
-        log("Fase de encerramento concluída. Números de processo encerrados: " + total + ".", "ok");
+        log("Fase de encerramento concluida. Numeros de processo encerrados: " + total + ".", "ok");
       }
       setStatus("Encerramentos concluidos: " + total);
     } catch (error) {
@@ -1150,12 +1207,12 @@
     const procedureUrl = getProcedureUrl(row);
     if (cell) {
       openElementInBackground(cell);
-      log("Pendência acionada por Ctrl+clique: " + label, "ok");
+      log("Pendencia acionada por Ctrl+clique: " + label, "ok");
     } else if (procedureUrl) {
       ctrlClickUrl(procedureUrl);
-      log("Pendência acionada por Ctrl+clique via URL: " + label, "ok");
+      log("Pendencia acionada por Ctrl+clique via URL: " + label, "ok");
     } else {
-      log("Pendência não encontrada: " + label, "error");
+      log("Pendencia nao encontrada: " + label, "error");
     }
 
     await sleep(CONFIG.delayTabMs);
@@ -1172,8 +1229,12 @@
         expediente.getAttribute("title") ||
         "Ler Expediente";
 
-      openElementInBackground(expediente);
-      log(title + " acionado para abrir em segundo plano.", "ok");
+      if (openElementInBackground(expediente)) {
+        log(title + " acionado para abrir em segundo plano.", "ok");
+      } else {
+        blocked += 1;
+        log(title + " nao abriu. Verifique se o navegador bloqueou pop-ups.", "error");
+      }
 
       await sleep(CONFIG.delayTabMs);
     }
@@ -1427,7 +1488,7 @@
   }
 
   function guardStart() {
-    if (state.running) throw new Error("Automação já está em execução.");
+    if (state.running) throw new Error("Automacao ja esta em execucao.");
     state.running = true;
     state.stopped = false;
   }
@@ -1435,8 +1496,8 @@
   function stop() {
     state.stopped = true;
     state.running = false;
-    setStatus("Fluxo Encerrado");
-    log("Parada solicitada pelo usuário.");
+    setStatus("Fluxo encerrado");
+    log("Parada solicitada pelo usuario.");
   }
 
   function createButton(text, onclick, variant) {
@@ -1518,7 +1579,7 @@
     setStoredCheckbox("#spa-cdsp-filter-tribunal-2", "SPA_CDSP_FILTER_TRIBUNAL_2", false);
     setStoredCheckbox("#spa-cdsp-filter-cejusc", "SPA_CDSP_FILTER_CEJUSC", false);
     updateActiveFiltersSummary();
-    if (!silent) log("Filtros de Origem limpos.");
+    if (!silent) log("Filtros de origem limpos.");
   }
 
   function clearDeadlineFilters(silent) {
@@ -1528,7 +1589,7 @@
     setStoredCheckbox("#spa-cdsp-deadline-none", "SPA_CDSP_DEADLINE_NONE", false);
     storageSet("SPA_CDSP_DEADLINE_FILTER", "");
     updateActiveFiltersSummary();
-    if (!silent) log("Filtros de Prazo limpos.");
+    if (!silent) log("Filtros de prazo limpos.");
   }
 
   function clearAllCustomFilters() {
@@ -1544,10 +1605,10 @@
 
     const labels = activeFilterLabels(currentCustomFilters());
     if (labels.length) {
-      label.textContent = "Filtros Ativos: " + labels.join("; ");
+      label.textContent = "Filtros ativos: " + labels.join("; ");
       label.style.color = "#ffe082";
     } else {
-      label.textContent = "Filtros Ativos: nenhum";
+      label.textContent = "Filtros ativos: nenhum";
       label.style.color = "#b0bec5";
     }
   }
@@ -1574,9 +1635,9 @@
 
     const actions = document.createElement("div");
     actions.style.cssText = "display:flex;gap:5px;flex-wrap:wrap;";
-    actions.appendChild(createSmallUtilityButton("Limpar Origem", clearSourceFilters));
-    actions.appendChild(createSmallUtilityButton("Limpar Prazo", clearDeadlineFilters));
-    actions.appendChild(createSmallUtilityButton("Limpar Tudo", clearAllCustomFilters));
+    actions.appendChild(createSmallUtilityButton("Limpar origem", clearSourceFilters));
+    actions.appendChild(createSmallUtilityButton("Limpar prazo", clearDeadlineFilters));
+    actions.appendChild(createSmallUtilityButton("Limpar tudo", clearAllCustomFilters));
 
     wrapper.appendChild(label);
     wrapper.appendChild(actions);
@@ -1646,7 +1707,7 @@
 
     const help = document.createElement("div");
     help.textContent =
-      "Quantidade vazia ou 0 processa tudo. Depois das ciências, use Atualizar lista. Se recarregar a aba com F5, clique na aba dos favoritos para injetar novamente.";
+      "Quantidade vazia ou 0 processa tudo. Depois das ciencias, use Atualizar lista. Se recarregar a aba com F5, injete este script novamente no Console.";
     help.style.cssText = "font-size:11px;color:#b0bec5;margin:8px 0;";
 
     const logBox = document.createElement("div");
@@ -1799,16 +1860,16 @@
       storageGet("SPA_CDSP_FILTER_TRIBUNAL_1", "0") === "1" ||
       storageGet("SPA_CDSP_FILTER_TRIBUNAL_2", "0") === "1" ||
       storageGet("SPA_CDSP_FILTER_CEJUSC", "0") === "1";
-    const section = createPanelSection("Filtros de Origem", hasSavedFilter);
+    const section = createPanelSection("Filtros de origem", hasSavedFilter);
 
     const hint = document.createElement("div");
-    hint.textContent = "Aplica as ações somente aos processos que baterem com os filtros marcados.";
+    hint.textContent = "Aplica as acoes somente aos processos que baterem com os filtros marcados.";
     hint.style.cssText = "font-size:11px;color:#9fb3c8;margin-bottom:6px;";
 
     section.body.appendChild(hint);
-    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-1", "Processos de 1° Grau", "SPA_CDSP_FILTER_TRIBUNAL_1"));
-    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-2", "Processos de 2° Grau", "SPA_CDSP_FILTER_TRIBUNAL_2"));
-    section.body.appendChild(createCheck("spa-cdsp-filter-cejusc", "CEJUSC", "SPA_CDSP_FILTER_CEJUSC"));
+    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-1", "Processos de 1o Grau", "SPA_CDSP_FILTER_TRIBUNAL_1"));
+    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-2", "Processos de 2o Grau", "SPA_CDSP_FILTER_TRIBUNAL_2"));
+    section.body.appendChild(createCheck("spa-cdsp-filter-cejusc", "Jurisdicao contem CEJUSC", "SPA_CDSP_FILTER_CEJUSC"));
 
     return section.section;
   }
@@ -1821,11 +1882,11 @@
       storageGet("SPA_CDSP_DEADLINE_SHORT", "0") === "1" ||
       storageGet("SPA_CDSP_DEADLINE_LATE", "0") === "1" ||
       storageGet("SPA_CDSP_DEADLINE_NONE", "0") === "1";
-    const section = createPanelSection("Filtro de Prazo", hasSavedDeadline);
+    const section = createPanelSection("Filtro de prazo", hasSavedDeadline);
 
     const hint = document.createElement("div");
     hint.textContent =
-      "Marque uma ou mais opções. Sem nenhuma opção marcada, todos os prazos entram no fluxo de trabalho.";
+      "Marque uma ou mais opcoes. Sem nenhuma opcao marcada, todos os prazos entram no fluxo.";
     hint.style.cssText = "font-size:11px;color:#9fb3c8;margin-bottom:6px;";
 
     section.body.appendChild(hint);
@@ -1864,7 +1925,7 @@
 
     const note = document.createElement("div");
     note.textContent =
-      "O filtro usa a cor do prazo no SPA. Vermelho também considera prazo vencido quando houver data.";
+      "O filtro usa a cor do prazo no SPA. Vermelho tambem considera prazo vencido quando houver data.";
     note.style.cssText = "font-size:11px;color:#9fb3c8;margin-top:6px;";
     section.body.appendChild(note);
 
