@@ -175,7 +175,7 @@
     if (limit) {
       log("Limite definido pelo painel: " + limit + " numero(s) de processo.");
     } else {
-      log("Sem limite de quantidade: a acao seguira ate o fim da lista.");
+      log("Sem limite de quantidade: a ação seguirá ate o fim da lista.");
     }
   }
 
@@ -344,7 +344,7 @@
         dt.ajax.reload(null, false);
         refreshed = true;
       } catch (error) {
-        log("Atualizacao interna por AJAX falhou. Tentando redesenhar a tabela: " + error.message);
+        log("Atualização interna por AJAX falhou. Tentando redesenhar a tabela: " + error.message);
       }
     }
 
@@ -617,7 +617,7 @@
     if (processKey) return processKey;
     if (!processRows || !processRows.length) return "processo sem identificacao";
     const info = rowInfo(processRows[0]);
-    return info.id || info.assunto || "processo sem identificacao";
+    return info.id || info.assunto || "processo sem identificação";
   }
 
   async function takeScienceCurrentPage(limit, processedProcessKeys) {
@@ -626,7 +626,7 @@
     const seen = processedProcessKeys || new Set();
     let count = 0;
     log(
-      "Linhas visiveis na pagina: " +
+      "Linhas visíveis na pagina: " +
         pageRows.length +
         ". Numeros de processo: " +
         pageProcesses.length +
@@ -655,13 +655,13 @@
           await sleep(CONFIG.delayScienceMs);
           await waitProcessingDone();
         } else {
-          log("Sem botao de ciencia: " + (info.id || info.assunto || label));
+          log("Sem botão de dar ciência: " + (info.id || info.assunto || label));
         }
       }
 
       if (processTotal) {
         count += 1;
-        log("Processo contabilizado para ciencia: " + label + ".", "ok");
+        log("Processo contabilizado para ciência: " + label + ".", "ok");
       }
     }
 
@@ -691,7 +691,7 @@
         total += pageTotal;
 
         if (limit && total >= limit) {
-          log("Limite de ciencias atingido (" + limit + ").");
+          log("Limite de ciências atingido (" + limit + ").");
           break;
         }
 
@@ -700,11 +700,11 @@
         pageNumber += 1;
       }
 
-      log("Fase de ciencia concluida. Numeros de processo acionados: " + total + ".", "ok");
-      setStatus("Ciencias concluidas: " + total);
+      log("Fase de ciência concluida. Números de processo acionados: " + total + ".", "ok");
+      setStatus("Ciências concluidas: " + total);
     } catch (error) {
       log("Erro na fase de ciencia: " + error.message, "error");
-      setStatus("Erro na fase de ciencia");
+      setStatus("Erro na fase de ciência");
     } finally {
       state.running = false;
     }
@@ -1002,7 +1002,7 @@
     const label = info.id || info.assunto || "linha sem id";
 
     if (!link) {
-      log("Opcao de encerramento nao encontrada: " + label, "error");
+      log("Opção de encerramento não encontrada: " + label, "error");
       return false;
     }
 
@@ -1085,7 +1085,7 @@
           "ok"
         );
       } else if (attempts) {
-        log("Nenhuma pendencia foi encerrada para o processo " + processKey + ".", "error");
+        log("Nenhuma pendência foi encerrada para o processo " + processKey + ".", "error");
       }
     }
 
@@ -1130,7 +1130,7 @@
       if (!total) {
         log("Nenhum processo com marcador ENCERRAR foi encerrado.", "error");
       } else {
-        log("Fase de encerramento concluida. Numeros de processo encerrados: " + total + ".", "ok");
+        log("Fase de encerramento concluída. Números de processo encerrados: " + total + ".", "ok");
       }
       setStatus("Encerramentos concluidos: " + total);
     } catch (error) {
@@ -1150,12 +1150,12 @@
     const procedureUrl = getProcedureUrl(row);
     if (cell) {
       openElementInBackground(cell);
-      log("Pendencia acionada por Ctrl+clique: " + label, "ok");
+      log("Pendência acionada por Ctrl+clique: " + label, "ok");
     } else if (procedureUrl) {
       ctrlClickUrl(procedureUrl);
-      log("Pendencia acionada por Ctrl+clique via URL: " + label, "ok");
+      log("Pendência acionada por Ctrl+clique via URL: " + label, "ok");
     } else {
-      log("Pendencia nao encontrada: " + label, "error");
+      log("Pendência não encontrada: " + label, "error");
     }
 
     await sleep(CONFIG.delayTabMs);
@@ -1427,7 +1427,7 @@
   }
 
   function guardStart() {
-    if (state.running) throw new Error("Automação já está em execucao.");
+    if (state.running) throw new Error("Automação já está em execução.");
     state.running = true;
     state.stopped = false;
   }
@@ -1435,8 +1435,8 @@
   function stop() {
     state.stopped = true;
     state.running = false;
-    setStatus("Fluxo encerrado");
-    log("Parada solicitada pelo usuario.");
+    setStatus("Fluxo Encerrado");
+    log("Parada solicitada pelo usuário.");
   }
 
   function createButton(text, onclick, variant) {
@@ -1574,9 +1574,9 @@
 
     const actions = document.createElement("div");
     actions.style.cssText = "display:flex;gap:5px;flex-wrap:wrap;";
-    actions.appendChild(createSmallUtilityButton("Limpar origem", clearSourceFilters));
-    actions.appendChild(createSmallUtilityButton("Limpar prazo", clearDeadlineFilters));
-    actions.appendChild(createSmallUtilityButton("Limpar tudo", clearAllCustomFilters));
+    actions.appendChild(createSmallUtilityButton("Limpar Origem", clearSourceFilters));
+    actions.appendChild(createSmallUtilityButton("Limpar Prazo", clearDeadlineFilters));
+    actions.appendChild(createSmallUtilityButton("Limpar Tudo", clearAllCustomFilters));
 
     wrapper.appendChild(label);
     wrapper.appendChild(actions);
@@ -1646,7 +1646,7 @@
 
     const help = document.createElement("div");
     help.textContent =
-      "Quantidade vazia ou 0 processa tudo. Depois das ciencias, use Atualizar lista. Se recarregar a aba com F5, injete este script novamente no Console.";
+      "Quantidade vazia ou 0 processa tudo. Depois das ciências, use Atualizar lista. Se recarregar a aba com F5, clique na aba dos favoritos para injetar novamente.";
     help.style.cssText = "font-size:11px;color:#b0bec5;margin:8px 0;";
 
     const logBox = document.createElement("div");
@@ -1821,11 +1821,11 @@
       storageGet("SPA_CDSP_DEADLINE_SHORT", "0") === "1" ||
       storageGet("SPA_CDSP_DEADLINE_LATE", "0") === "1" ||
       storageGet("SPA_CDSP_DEADLINE_NONE", "0") === "1";
-    const section = createPanelSection("Filtro de prazo", hasSavedDeadline);
+    const section = createPanelSection("Filtro de Prazo", hasSavedDeadline);
 
     const hint = document.createElement("div");
     hint.textContent =
-      "Marque uma ou mais opcoes. Sem nenhuma opcao marcada, todos os prazos entram no fluxo.";
+      "Marque uma ou mais opções. Sem nenhuma opção marcada, todos os prazos entram no fluxo de trabalho.";
     hint.style.cssText = "font-size:11px;color:#9fb3c8;margin-bottom:6px;";
 
     section.body.appendChild(hint);
@@ -1864,7 +1864,7 @@
 
     const note = document.createElement("div");
     note.textContent =
-      "O filtro usa a cor do prazo no SPA. Vermelho tambem considera prazo vencido quando houver data.";
+      "O filtro usa a cor do prazo no SPA. Vermelho também considera prazo vencido quando houver data.";
     note.style.cssText = "font-size:11px;color:#9fb3c8;margin-top:6px;";
     section.body.appendChild(note);
 
