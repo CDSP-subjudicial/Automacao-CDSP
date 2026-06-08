@@ -1806,9 +1806,9 @@
     hint.style.cssText = "font-size:11px;color:#9fb3c8;margin-bottom:6px;";
 
     section.body.appendChild(hint);
-    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-1", "Processos de 1o Grau", "SPA_CDSP_FILTER_TRIBUNAL_1"));
-    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-2", "Processos de 2o Grau", "SPA_CDSP_FILTER_TRIBUNAL_2"));
-    section.body.appendChild(createCheck("spa-cdsp-filter-cejusc", "Jurisdicao contem CEJUSC", "SPA_CDSP_FILTER_CEJUSC"));
+    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-1", "Processos de 1° Grau", "SPA_CDSP_FILTER_TRIBUNAL_1"));
+    section.body.appendChild(createCheck("spa-cdsp-filter-tribunal-2", "Processos de 2° Grau", "SPA_CDSP_FILTER_TRIBUNAL_2"));
+    section.body.appendChild(createCheck("spa-cdsp-filter-cejusc", "CEJUSC", "SPA_CDSP_FILTER_CEJUSC"));
 
     return section.section;
   }
