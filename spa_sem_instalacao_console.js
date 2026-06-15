@@ -5,7 +5,7 @@
     pageLength: 100,
     delayScienceMs: 1200,
     delayPageMs: 2200,
-    delayTabMs: 500,
+    delayTabMs: 250,
     delayCloseMs: 1800,
     dateFilter: {
       enabled: false,
@@ -310,9 +310,13 @@
     }
   }
 
-  function expandGroupsIfPresent() {
+  async function expandGroupsIfPresent() {
     const button = document.querySelector("#expand-all-groups");
-    if (button) button.click();
+    if (!button) return;
+
+    button.click();
+    await sleep(700);
+    await waitProcessingDone();
   }
 
   async function goFirstPage() {
@@ -359,7 +363,7 @@
     await waitProcessingDone();
     await setPageLength();
     await applyDateFilterIfNeeded();
-    expandGroupsIfPresent();
+    await expandGroupsIfPresent();
     log("Lista atualizada. O painel continua carregado.", "ok");
   }
 
@@ -680,7 +684,7 @@
       await setPageLength();
       await applyDateFilterIfNeeded();
       await goFirstPage();
-      expandGroupsIfPresent();
+      await expandGroupsIfPresent();
 
       let total = 0;
       let pageNumber = 1;
@@ -726,7 +730,7 @@
   }
 
   function keepCurrentTabFocused() {
-    [30, 120, 300, 700, 1200, 1800].forEach((delay) => {
+    [80, 250, 700].forEach((delay) => {
       setTimeout(() => {
         try {
           window.focus();
@@ -739,27 +743,65 @@
     });
   }
 
-  function middleClickElement(element) {
-    if (!element) return false;
+  function resolveUrl(url) {
+    const value = String(url || "").trim();
+    if (!value || value === "#" || /^javascript:/i.test(value)) return "";
 
-    if (element.scrollIntoView) {
-      element.scrollIntoView({ block: "center", inline: "nearest" });
+    try {
+      return new URL(value, window.location.href).href;
+    } catch (_error) {
+      return value;
+    }
+  }
+
+  function elementLink(element) {
+    if (!element) return null;
+    const tag = String(element.tagName || "").toLowerCase();
+    return tag === "a" ? element : element.closest("a[href]");
+  }
+
+  function elementUrl(element) {
+    const link = elementLink(element);
+    return link ? resolveUrl(link.href || link.getAttribute("href") || "") : "";
+  }
+
+  function openUrlInBackground(url) {
+    const href = resolveUrl(url);
+    if (!href) return false;
+
+    try {
+      const opened = window.open(href, "_blank");
+      if (opened) {
+        try {
+          opened.blur();
+        } catch (_error) {
+          // Alguns navegadores bloqueiam controle de foco da aba aberta.
+        }
+        keepCurrentTabFocused();
+        return true;
+      }
+    } catch (_error) {
+      // Se window.open for bloqueado, tenta o clique em um link descartavel.
     }
 
-    const downOptions = {
-      bubbles: true,
-      cancelable: true,
-      view: window,
-      button: 1,
-      buttons: 4,
-    };
-    const clickOptions = Object.assign({}, downOptions, { buttons: 0 });
+    if (!document.body) return false;
 
-    element.dispatchEvent(new MouseEvent("mousedown", downOptions));
-    element.dispatchEvent(new MouseEvent("mouseup", clickOptions));
-    element.dispatchEvent(new MouseEvent("auxclick", clickOptions));
-    keepCurrentTabFocused();
-    return true;
+    const link = document.createElement("a");
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;";
+    document.body.appendChild(link);
+
+    try {
+      link.click();
+      keepCurrentTabFocused();
+      return true;
+    } catch (_error) {
+      return false;
+    } finally {
+      link.remove();
+    }
   }
 
   function openElementInBackground(element) {
@@ -781,37 +823,8 @@
     const href = link.href || link.getAttribute("href") || "";
     if (!href || href === "#") return ctrlClickElement(link);
 
-    if (link.scrollIntoView) {
-      link.scrollIntoView({ block: "center", inline: "nearest" });
-    }
-
-    const target = link.getAttribute("target") || "_blank";
-
-    try {
-      const opened = window.open(href, target);
-      if (opened) {
-        try {
-          opened.blur();
-        } catch (_error) {
-          // Alguns navegadores bloqueiam controle de foco da aba aberta.
-        }
-        keepCurrentTabFocused();
-        return true;
-      }
-    } catch (_error) {
-      // Se o navegador bloquear window.open, tenta o clique do próprio link.
-    }
-
-    try {
-      link.setAttribute("target", target);
-      const rel = link.getAttribute("rel") || "";
-      if (rel.indexOf("noopener") < 0) link.setAttribute("rel", (rel + " noopener noreferrer").trim());
-      link.click();
-      keepCurrentTabFocused();
-      return true;
-    } catch (_error) {
-      return ctrlClickElement(link);
-    }
+    if (openUrlInBackground(href)) return true;
+    return ctrlClickElement(link);
   }
 
   function ctrlClickElement(element) {
@@ -839,20 +852,7 @@
   }
 
   function ctrlClickUrl(url) {
-    if (!url || !document.body) return false;
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.style.cssText = "position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;";
-    document.body.appendChild(link);
-
-    try {
-      return ctrlClickElement(link);
-    } finally {
-      link.remove();
-    }
+    return openUrlInBackground(url);
   }
 
   function sortByScreenPosition(elements) {
@@ -1159,7 +1159,7 @@
       await setPageLength();
       await applyDateFilterIfNeeded();
       await goFirstPage();
-      expandGroupsIfPresent();
+      await expandGroupsIfPresent();
 
       let total = 0;
       let pageNumber = 1;
@@ -1198,48 +1198,110 @@
     }
   }
 
-  async function openTabsForRow(row) {
-    let blocked = 0;
+  function expedienteTitle(element, index) {
+    return (
+      element.getAttribute("data-original-title") ||
+      element.getAttribute("title") ||
+      element.getAttribute("aria-label") ||
+      "Ler Expediente " + (index + 1)
+    );
+  }
+
+  function buildOpenPlanForRow(row) {
     const info = rowInfo(row);
     const label = info.id || info.assunto || "linha sem id";
-
     const cell = row.querySelector("td.cursor-pointer");
-    const procedureUrl = getProcedureUrl(row);
-    if (cell) {
-      openElementInBackground(cell);
-      log("Pendencia acionada por Ctrl+clique: " + label, "ok");
-    } else if (procedureUrl) {
-      ctrlClickUrl(procedureUrl);
-      log("Pendencia acionada por Ctrl+clique via URL: " + label, "ok");
-    } else {
-      log("Pendencia nao encontrada: " + label, "error");
-    }
-
-    await sleep(CONFIG.delayTabMs);
-
+    const procedureUrl = resolveUrl(getProcedureUrl(row));
     const expedientes = sortByScreenPosition(getExpedientes(row));
+    const tasks = [];
 
-    if (!expedientes.length) {
-      log("Sem expediente visivel: " + label);
+    if (cell || procedureUrl) {
+      tasks.push({
+        kind: "pendency",
+        label: "Pendencia",
+        element: cell,
+        url: procedureUrl,
+        preferUrl: false,
+      });
     }
 
-    for (const expediente of expedientes) {
-      const title =
-        expediente.getAttribute("data-original-title") ||
-        expediente.getAttribute("title") ||
-        "Ler Expediente";
+    expedientes.forEach((expediente, index) => {
+      tasks.push({
+        kind: "expediente",
+        label: expedienteTitle(expediente, index),
+        element: expediente,
+        url: elementUrl(expediente),
+        preferUrl: true,
+      });
+    });
 
-      if (openElementInBackground(expediente)) {
-        log(title + " acionado para abrir em segundo plano.", "ok");
+    return {
+      label: label,
+      tasks: tasks,
+      hasPendencia: Boolean(cell || procedureUrl),
+      expedienteCount: expedientes.length,
+    };
+  }
+
+  function openPreparedTask(task) {
+    if (!task) return false;
+
+    if (task.preferUrl && task.url && openUrlInBackground(task.url)) {
+      return true;
+    }
+
+    if (task.element && openElementInBackground(task.element)) {
+      return true;
+    }
+
+    if (task.url && openUrlInBackground(task.url)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  async function openTabsForRow(row) {
+    let blocked = 0;
+    let opened = 0;
+    let pendenciaOpened = 0;
+    let expedientesOpened = 0;
+    const plan = buildOpenPlanForRow(row);
+
+    if (!plan.hasPendencia) {
+      log("Pendencia nao encontrada: " + plan.label, "error");
+    }
+
+    if (!plan.expedienteCount) {
+      log("Sem expediente visivel: " + plan.label);
+    }
+
+    for (const task of plan.tasks) {
+      if (state.stopped) break;
+
+      if (openPreparedTask(task)) {
+        opened += 1;
+        if (task.kind === "pendency") {
+          pendenciaOpened += 1;
+          log("Pendencia acionada para abrir em segundo plano: " + plan.label, "ok");
+        } else {
+          expedientesOpened += 1;
+          log(task.label + " acionado para abrir em segundo plano.", "ok");
+        }
       } else {
         blocked += 1;
-        log(title + " nao abriu. Verifique se o navegador bloqueou pop-ups.", "error");
+        log(task.label + " nao abriu. Verifique se o navegador bloqueou pop-ups.", "error");
       }
 
       await sleep(CONFIG.delayTabMs);
     }
 
-    return { blocked: blocked };
+    return {
+      blocked: blocked,
+      opened: opened,
+      pendenciaOpened: pendenciaOpened,
+      expedientesOpened: expedientesOpened,
+    };
   }
 
   async function openTabsCurrentPage(limit, processedProcessKeys) {
@@ -1264,6 +1326,7 @@
 
       seen.add(processItem.key);
       const label = processLogLabel(processItem.key, processItem.rows);
+      let processOpened = 0;
       log("Abrindo processo " + label + " (" + processItem.rows.length + " pendencia(s)).");
 
       for (const row of processItem.rows) {
@@ -1271,10 +1334,15 @@
 
         const result = await openTabsForRow(row);
         blocked += result.blocked;
+        processOpened += result.opened;
       }
 
-      count += 1;
-      log("Processo contabilizado na abertura de abas: " + label + ".", "ok");
+      if (processOpened) {
+        count += 1;
+        log("Processo contabilizado na abertura de abas: " + label + ".", "ok");
+      } else {
+        log("Processo sem abas acionadas: " + label + ".", "error");
+      }
     }
 
     if (blocked) {
@@ -1297,7 +1365,7 @@
       await setPageLength();
       await applyDateFilterIfNeeded();
       await goFirstPage();
-      expandGroupsIfPresent();
+      await expandGroupsIfPresent();
 
       let total = 0;
       let pageNumber = 1;
@@ -1425,15 +1493,21 @@
         continue;
       }
 
+      let processOpened = 0;
       for (const row of items) {
         if (state.stopped) break;
 
         const result = await openTabsForRow(row);
         blocked += result.blocked;
+        processOpened += result.opened;
       }
 
-      count += 1;
-      log("Processo duplicado contabilizado: " + processKey + ".", "ok");
+      if (processOpened) {
+        count += 1;
+        log("Processo duplicado contabilizado: " + processKey + ".", "ok");
+      } else {
+        log("Grupo duplicado sem abas acionadas: " + processKey + ".", "error");
+      }
     }
 
     if (blocked) {
